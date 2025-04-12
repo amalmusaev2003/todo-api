@@ -1,12 +1,11 @@
-# database.py
 import sqlite3
 from contextlib import contextmanager
+from config import settings
 
-DATABASE_URL = "tasks.db"
 
 def get_db_connection():
     """Create a database connection and return it"""
-    return sqlite3.connect(DATABASE_URL)
+    return sqlite3.connect(settings.DATABASE_URL)
 
 @contextmanager
 def get_db_cursor():

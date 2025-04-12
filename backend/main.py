@@ -1,10 +1,11 @@
-# main.py
 from fastapi import Depends, HTTPException, FastAPI, Response
 from schemas.TaskSchema import Task, TaskCreate, TaskUpdate
 from schemas.UserSchema import User
 from database import init_db
 from repositories import task_repository, user_repository
+from pydantic import ValidationError
 from auth import get_current_user, create_access_token, authenticate_user
+from utils.auth import validate_username
 from datetime import timedelta
 
 app = FastAPI() 
@@ -20,22 +21,30 @@ async def register_user(user: User):
 
 @app.post("/login")
 async def login(username: str, password: str, response: Response):
-    user = authenticate_user(username, password)
-    if not user:
-        raise HTTPException(status_code=401, detail="Неверное имя пользователя или пароль")
-    access_token_expires = timedelta(minutes=30)
-    access_token = create_access_token(
-        data={"sub": user["username"]}, expires_delta=access_token_expires
-    )
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        max_age=1800,
-        expires=1800,
-        secure=False,
-    )
-    return {"message": "Вы успешно вошли"}
+    try:
+        # Валидация имени пользователя
+        validate_username(username)
+        
+        user = authenticate_user(username, password)
+        if not user:
+            raise HTTPException(status_code=401, detail="Неверное имя пользователя или пароль")
+        
+        access_token_expires = timedelta(minutes=30)
+        access_token = create_access_token(
+            data={"sub": user["username"]}, expires_delta=access_token_expires
+        )
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            max_age=1800,
+            expires=1800,
+            secure=False,
+        )
+        return {"message": "Вы успешно вошли"}
+    except ValidationError as e:
+        # Преобразуем наши кастомные исключения в HTTP-исключения
+        raise HTTPException(status_code=400, detail=e.message)
 
 @app.get("/tasks")
 async def get_tasks(current_user: dict = Depends(get_current_user)):

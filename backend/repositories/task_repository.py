@@ -1,4 +1,3 @@
-# repositories/task_repository.py
 from fastapi import HTTPException
 from database import get_db_cursor
 from schemas.TaskSchema import Task, TaskCreate, TaskUpdate
